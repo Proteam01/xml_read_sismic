@@ -94,7 +94,7 @@ class ScheduleExecutor(QThread):
 def main():
     app = QApplication(sys.argv)
     window = MainWindow()
-    # window.show()
+    window.show()
     tray = QSystemTrayIcon()
     tray.setIcon(window.icon)
     tray.setVisible(True)
