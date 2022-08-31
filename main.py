@@ -18,10 +18,10 @@ MainClass, _ = loadUiType('main_window.ui')
 
 class MainWindow(MainClass, QMainWindow):
 
-    alert_signal = pyqtSignal(Sismo)
+    alert_signal = pyqtSignal(Sismo,float)
 
     def __init__(self):
-        super(MainWindow, self).__init__()
+        super(MainWindow, self).__init__(parent=None)
         self.icon = QIcon('sismo_16x16.png')
         self.setupUi(self)
         self.style = qdarkstyle.load_stylesheet()
@@ -38,24 +38,18 @@ class MainWindow(MainClass, QMainWindow):
         self.hide()
 
     def parse_xml(self):
-        self.status_line_edit.setText(
-            'Ultima Ejecucion: ' + datetime.now().__str__())
+        self.status_line_edit.setText('Ultima Ejecucion: ' + datetime.now().__str__())
         response = requests.get(OPTIONS['url_sismos'])
         dom = parseString(response.content)
         items = dom.getElementsByTagName('item')
         with Session() as session:
             for item in items:
                 sismo = Sismo()
-                sismo.title = item.getElementsByTagName(
-                    'title')[0].firstChild.nodeValue.strip()
-                sismo.description = item.getElementsByTagName(
-                    'description')[0].firstChild.nodeValue.strip()
-                sismo.link = item.getElementsByTagName(
-                    'link')[0].firstChild.nodeValue
-                sismo.latitud = float(item.getElementsByTagName(
-                    'geo:lat')[0].firstChild.nodeValue)
-                sismo.longigud = float(item.getElementsByTagName(
-                    'geo:long')[0].firstChild.nodeValue)
+                sismo.title = item.getElementsByTagName('title')[0].firstChild.nodeValue.strip()
+                sismo.description = item.getElementsByTagName('description')[0].firstChild.nodeValue.strip()
+                sismo.link = item.getElementsByTagName('link')[0].firstChild.nodeValue
+                sismo.latitud = float(item.getElementsByTagName('geo:lat')[0].firstChild.nodeValue)
+                sismo.longigud = float(item.getElementsByTagName('geo:long')[0].firstChild.nodeValue)
                 nuevo_sismo = session.query(Sismo).filter(Sismo.title == sismo.title).count() == 0
                 if nuevo_sismo:
                     session.add(sismo)
@@ -67,11 +61,11 @@ class MainWindow(MainClass, QMainWindow):
         result = re.search('^\d*\.\d*', title)
         magnitud = float(result[0])
         alerta = float(OPTIONS['alerta'])
-        if magnitud > alerta:
-            self.alert_signal.emit(sismo)
+        if magnitud >= alerta:
+            self.alert_signal.emit(sismo,magnitud)
 
-    @pyqtSlot(Sismo)
-    def show_alert(self, sismo: Sismo):
+    @pyqtSlot(Sismo,float)
+    def show_alert(self, sismo: Sismo,magnitud: float):
         self.show()
         message = QMessageBox(self)
         message.setWindowTitle("Evento Critico")
@@ -79,6 +73,7 @@ class MainWindow(MainClass, QMainWindow):
         message.setIcon(QMessageBox.Icon.Critical)
         message.exec_()
         # aqui es donde se puede encadenar accion extra
+
 
 class ScheduleExecutor(QThread):
 
